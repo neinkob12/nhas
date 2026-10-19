@@ -12,12 +12,19 @@ browser right away.
 
 Needs Python 3.10+. No packages to install.
 
-1. Log in at https://citychickennhas.de/bestellen/en/koeln in your browser.
+The bot needs **its own login**. The site's login token lasts one hour and renews itself; if your
+normal browser and the bot share one login, both try to renew it and the site can log you out.
+
+1. Open a **private/incognito window** and log in at https://citychickennhas.de/bestellen/en/koeln.
 2. Open DevTools (F12), go to the **Network** tab and reload the page.
-3. Click any request to `citychickennhas.de/bestellen/api/...`, find **Request Headers**,
-   and copy the whole value of the `Cookie` header.
+3. Click the `me` request (or any `.../bestellen/api/...` one), find **Request Headers**, and
+   copy the whole value of the `cookie` header (from `bp-auth-token.0=` to the end).
 4. Paste it into a file called `cookie.txt` next to the script (it is gitignored).
-   Never commit or share it: it is your login.
+5. **Close the private window without logging out.** Logging out would end the bot's login too.
+
+Never commit or share `cookie.txt`: it is your login. The bot rewrites it whenever the site renews
+the login, so a long run stays logged in. If you log out anywhere on the site later, the bot's
+login may end too; then repeat these steps.
 
 ## Usage
 

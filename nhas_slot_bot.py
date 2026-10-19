@@ -14,8 +14,10 @@ talks to a small JSON API under /bestellen/api. This script uses the same endpoi
 Re-posting a hold for the same slot renews it, which is what the site's own
 "extend" button does. Push notifications go through ntfy (https://ntfy.sh).
 
-Authentication is your browser session cookie (see README.md). Only the Python
-standard library is used, so there is nothing to install.
+Authentication is your browser session cookie (see README.md). The site's login
+token lasts an hour and the server renews it via Set-Cookie, so we keep those
+updates and write them back to the cookie file. Only the Python standard library
+is used, so there is nothing to install.
 """
 
 from __future__ import annotations
@@ -30,6 +32,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
+from email.utils import parsedate_to_datetime
 from datetime import date, datetime, time as dtime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -53,10 +56,48 @@ class ApiError(Exception):
 
 
 class Client:
-    def __init__(self, cookie: str, locale: str, timeout: float = 20):
-        self.cookie = cookie
+    def __init__(self, cookie: str, locale: str, save_to: str | None = None, timeout: float = 20):
+        self.jar = dict(
+            part.strip().split("=", 1) for part in cookie.split(";") if "=" in part
+        )
         self.locale = locale
+        self.save_to = save_to
         self.timeout = timeout
+
+    @property
+    def cookie(self) -> str:
+        return "; ".join(f"{k}={v}" for k, v in self.jar.items())
+
+    def _absorb(self, headers) -> None:
+        """Apply Set-Cookie headers (the renewed login) and persist them."""
+        changed = False
+        for header in headers.get_all("Set-Cookie") or []:
+            first, *rest = header.split(";")
+            if "=" not in first:
+                continue
+            name, value = (x.strip() for x in first.split("=", 1))
+            attrs = {a.split("=", 1)[0].strip().lower(): a.split("=", 1)[-1].strip() for a in rest}
+            expired = False
+            if "max-age" in attrs:
+                try:
+                    expired = int(attrs["max-age"]) <= 0
+                except ValueError:
+                    pass
+            elif "expires" in attrs:
+                try:
+                    expired = parsedate_to_datetime(attrs["expires"]) < datetime.now(timezone.utc)
+                except (TypeError, ValueError):
+                    pass
+            if expired or not value:
+                changed |= self.jar.pop(name, None) is not None
+            elif self.jar.get(name) != value:
+                self.jar[name] = value
+                changed = True
+        if changed and self.save_to:
+            tmp = f"{self.save_to}.tmp"
+            with open(tmp, "w", encoding="utf-8") as fh:
+                fh.write(self.cookie + "\n")
+            os.replace(tmp, self.save_to)
 
     def request(self, method: str, path: str, query: dict | None = None, body: dict | None = None):
         url = f"{API}{path}"
@@ -76,9 +117,11 @@ class Client:
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                self._absorb(resp.headers)
                 raw = resp.read()
                 return json.loads(raw) if raw else None
         except urllib.error.HTTPError as e:
+            self._absorb(e.headers)
             raw = e.read()
             try:
                 err = json.loads(raw).get("error", {})
@@ -262,14 +305,17 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
-def load_cookie(args: argparse.Namespace) -> str:
+def load_cookie(args: argparse.Namespace) -> tuple[str, str | None]:
+    """Return the cookie and the file to save renewed logins to (None if not from a file)."""
     cookie = args.cookie or os.environ.get("NHAS_COOKIE")
-    if not cookie and os.path.exists(args.cookie_file):
+    if cookie:
+        return cookie.removeprefix("Cookie:").strip(), None
+    if os.path.exists(args.cookie_file):
         with open(args.cookie_file, encoding="utf-8") as fh:
             cookie = fh.read().strip()
     if not cookie:
         sys.exit("No cookie found. Put your browser's Cookie header in cookie.txt (see README.md).")
-    return cookie.removeprefix("Cookie:").strip()
+    return cookie.removeprefix("Cookie:").strip(), args.cookie_file
 
 
 def main(argv: list[str]) -> int:
@@ -283,7 +329,10 @@ def main(argv: list[str]) -> int:
             return 1
         log("Test push sent.")
         return 0
-    client = Client(load_cookie(args), args.locale)
+    cookie, cookie_file = load_cookie(args)
+    if cookie_file is None:
+        log("Note: cookie given via --cookie/$NHAS_COOKIE, so renewed logins are not saved. Use cookie.txt for long runs.")
+    client = Client(cookie, args.locale, save_to=cookie_file)
     filters = Filters(args.party, args.dates, args.earliest, args.latest, args.days_ahead)
 
     try:
