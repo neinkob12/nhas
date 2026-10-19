@@ -9,6 +9,10 @@ talks to a small JSON API under /bestellen/api. This script uses the same endpoi
     GET  /slots?store=<id>&date=YYYY-MM-DD&party=N&locale=en
                                                 -> {date, today, bookableDates, rules, slots:[...]}
     POST /holds {store, scheduledAt, partySize} -> reserves the slot for ~10 minutes
+    GET  /holds                                 -> your current hold (or null)
+
+Re-posting a hold for the same slot renews it, which is what the site's own
+"extend" button does. Push notifications go through ntfy (https://ntfy.sh).
 
 Authentication is your browser session cookie (see README.md). Only the Python
 standard library is used, so there is nothing to install.
@@ -32,6 +36,8 @@ from zoneinfo import ZoneInfo
 BASE = "https://citychickennhas.de"
 API = f"{BASE}/bestellen/api"
 TZ = ZoneInfo("Europe/Berlin")
+EXTEND_BELOW_S = 90  # renew a hold once less than this is left
+HOLD_CHECK_S = 20
 USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/141.0 Safari/537.36"
@@ -111,6 +117,30 @@ class Filters:
     max_days_ahead: int
 
 
+class Notifier:
+    """Sends phone push notifications via ntfy. A no-op when no topic is set."""
+
+    def __init__(self, server: str, topic: str | None):
+        self.url = f"{server.rstrip('/')}/{topic}" if topic else None
+
+    def send(self, title: str, message: str, click: str | None = None, urgent: bool = False) -> bool:
+        if not self.url:
+            return False
+        # ntfy reads these as HTTP headers, so they must stay ASCII
+        headers = {"Title": title.encode("ascii", "replace").decode(), "Tags": "poultry_leg"}
+        if click:
+            headers["Click"] = click
+        if urgent:
+            headers["Priority"] = "urgent"
+        req = urllib.request.Request(self.url, data=message.encode(), headers=headers, method="POST")
+        try:
+            urllib.request.urlopen(req, timeout=10).close()
+            return True
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            log(f"Could not send push notification: {e}")
+            return False
+
+
 def parse_ts(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(TZ)
 
@@ -156,6 +186,58 @@ def find_slot(client: Client, store_id: str, f: Filters) -> dict | None:
     return None
 
 
+def seconds_left(hold: dict) -> float:
+    """Time left on a hold, measured on the server's clock so a skewed local clock doesn't matter."""
+    now = parse_ts(hold["serverNow"]) if hold.get("serverNow") else datetime.now(TZ)
+    return (parse_ts(hold["expiresAt"]) - now).total_seconds()
+
+
+def keep_held(client: Client, hold: dict, minutes: float, notify: Notifier, page: str) -> int:
+    """Renew the hold until you start paying, give it up, or `minutes` have passed."""
+    start = hold["slot"]["start"]
+    deadline = time.monotonic() + minutes * 60
+    log(f"Keeping the slot held for up to {minutes:g} min. Ctrl+C to stop (the hold then just runs out).")
+    while True:
+        try:
+            cur = client.current_hold()
+        except ApiError as e:
+            if e.status == 401:
+                notify.send("Bot logged out", "Cookie expired, can't extend. Finish the order now!", click=page, urgent=True)
+                log("Session expired, can't extend anymore.")
+                return 1
+            log(f"Could not check the hold: {e}")
+            cur = hold
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            log(f"Network error while checking the hold: {e}")
+            cur = hold
+
+        if not cur:
+            log("Hold is gone (order placed, released, or expired). Done.")
+            return 0
+        if cur.get("orderNumber") is not None:
+            log("You're in checkout. The site keeps the slot while you pay, so I stop extending.")
+            return 0
+        if cur["slot"]["start"] != start:
+            log("You picked a different slot in the browser. Stopping.")
+            return 0
+
+        left = seconds_left(cur)
+        if left < EXTEND_BELOW_S:
+            if time.monotonic() > deadline:
+                notify.send("Slot hold running out", f"Stopped extending after {minutes:g} min. "
+                            f"About {max(left, 0):.0f}s left.", click=page, urgent=True)
+                log("Max keep time reached, letting the hold run out.")
+                return 0
+            try:
+                cur = client.hold(cur["storeId"], start, cur["partySize"])
+                log(f"Extended, now held until {parse_ts(cur['expiresAt']):%H:%M:%S}.")
+            except (ApiError, urllib.error.URLError, TimeoutError, ConnectionError) as e:
+                notify.send("Could not extend your slot", f"{e}. Finish the order now!", click=page, urgent=True)
+                log(f"Extending failed: {e}")
+        hold = cur
+        time.sleep(min(HOLD_CHECK_S, max(left - EXTEND_BELOW_S + 5, 5)))
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--cookie", help="Cookie header value (default: $NHAS_COOKIE or --cookie-file)")
@@ -171,6 +253,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--interval", type=float, default=30, help="Seconds between checks (default: 30)")
     p.add_argument("--once", action="store_true", help="Check once and exit instead of polling")
     p.add_argument("--dry-run", action="store_true", help="Only report free slots, never reserve")
+    p.add_argument("--ntfy-topic", default=os.environ.get("NHAS_NTFY_TOPIC"),
+                   help="ntfy topic for phone push (default: $NHAS_NTFY_TOPIC). Pick something unguessable")
+    p.add_argument("--ntfy-server", default="https://ntfy.sh")
+    p.add_argument("--keep-held", type=float, default=30, metavar="MINUTES",
+                   help="Keep renewing the hold for up to this long until you check out (default: 30, 0 = off)")
+    p.add_argument("--test-push", action="store_true", help="Send a test push notification and exit")
     return p.parse_args(argv)
 
 
@@ -186,6 +274,15 @@ def load_cookie(args: argparse.Namespace) -> str:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
+    notify = Notifier(args.ntfy_server, args.ntfy_topic)
+    page = f"{BASE}/bestellen/{args.locale}/{args.store}"
+    if args.test_push:
+        if not args.ntfy_topic:
+            sys.exit("Set --ntfy-topic or $NHAS_NTFY_TOPIC first.")
+        if not notify.send("Nhas bot test", "Push works. Tap to open the order page.", click=page):
+            return 1
+        log("Test push sent.")
+        return 0
     client = Client(load_cookie(args), args.locale)
     filters = Filters(args.party, args.dates, args.earliest, args.latest, args.days_ahead)
 
@@ -208,7 +305,9 @@ def main(argv: list[str]) -> int:
             if slot is None:
                 log("No matching slot free yet.")
             elif args.dry_run:
-                log(f"Free: {parse_ts(slot['start']):%a %d.%m %H:%M} ({slot['remainingPersons']} places left). Dry run, not reserving.")
+                msg = f"{parse_ts(slot['start']):%a %d.%m %H:%M} ({slot['remainingPersons']} places left)"
+                log(f"Free: {msg}. Dry run, not reserving.")
+                notify.send("Free slot found", msg, click=page)
                 return 0
             else:
                 start = parse_ts(slot["start"])
@@ -224,8 +323,14 @@ def main(argv: list[str]) -> int:
                 else:
                     expires = hold.get("expiresAt")
                     until = f" until {parse_ts(expires):%H:%M}" if expires else ""
-                    log(f"RESERVED {start:%a %d.%m %H:%M} for {args.party}{until}.")
-                    log(f"Finish your order in the browser now: {BASE}/bestellen/{args.locale}/{args.store}")
+                    what = f"{start:%a %d.%m %H:%M} for {args.party}"
+                    log(f"RESERVED {what}{until}.")
+                    log(f"Finish your order in the browser now: {page}")
+                    keep = f" I keep it held for up to {args.keep_held:g} min." if args.keep_held > 0 else ""
+                    notify.send("Slot reserved!", f"{what}{until}.{keep} Tap to order and pay.",
+                                click=page, urgent=True)
+                    if args.keep_held > 0 and expires:
+                        return keep_held(client, hold, args.keep_held, notify, page)
                     return 0
         except ApiError as e:
             if e.status == 401:
