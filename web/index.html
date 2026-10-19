@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Slot Bot for Nhas Köln</title>
+  <meta name="description" content="Set up a small bot on your own computer that watches Nhas City Chicken Köln for a free table and holds it for you.">
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍗</text></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="#top">Slot Bot</a>
+      <div class="segmented" role="radiogroup" aria-label="Your computer">
+        <button type="button" role="radio" data-os="mac" aria-checked="true">Mac</button>
+        <button type="button" role="radio" data-os="win" aria-checked="false">Windows</button>
+        <span class="segmented-thumb" aria-hidden="true"></span>
+      </div>
+      <div class="progress" aria-live="polite">
+        <span class="progress-label"><span id="done-count">0</span> of <span id="total-count">7</span></span>
+        <span class="progress-track"><span class="progress-fill" id="progress-fill"></span></span>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <p class="eyebrow">Unofficial helper for Nhas City Chicken Köln</p>
+      <h1>Never miss a table again.</h1>
+      <p class="lede">A small bot on your own computer watches for a free time slot, holds it the second it opens up, and buzzes your phone so you can order and pay right there.</p>
+      <a class="button primary large" href="#step-1">Start setup</a>
+      <p class="hint">About 15 minutes, once. No account, nothing to buy.</p>
+    </section>
+
+    <section class="how" aria-labelledby="how-title">
+      <h2 id="how-title" class="section-title">How it works</h2>
+      <div class="tiles">
+        <article class="tile">
+          <span class="tile-icon" aria-hidden="true">👀</span>
+          <h3>Watches</h3>
+          <p>Checks the booking page every 30 seconds for a slot that fits your day, time and group size.</p>
+        </article>
+        <article class="tile">
+          <span class="tile-icon" aria-hidden="true">✋</span>
+          <h3>Holds</h3>
+          <p>Grabs it instantly, like clicking it yourself, and keeps renewing the 10 minute hold until you check out.</p>
+        </article>
+        <article class="tile">
+          <span class="tile-icon" aria-hidden="true">📱</span>
+          <h3>Buzzes you</h3>
+          <p>Sends a push to your phone. Tap it, pick your food, pay with Apple Pay. Done.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="steps" aria-labelledby="steps-title">
+      <h2 id="steps-title" class="section-title">Setup</h2>
+      <p class="section-sub">Tick off each step. Your progress is saved in this browser.</p>
+
+      <ol class="step-list">
+        <!-- 1 -->
+        <li class="step" id="step-1" data-step="1">
+          <div class="step-head">
+            <span class="badge" aria-hidden="true"><span class="num">1</span><svg class="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            <div class="step-title"><h3>Check Python</h3><p class="step-meta">1 minute</p></div>
+          </div>
+          <div class="step-body"><div class="step-inner">
+            <p>The bot is a single Python file. Open <strong data-os-text="Terminal|PowerShell">Terminal</strong> <span class="muted" data-os-text="(Cmd + Space, type “Terminal”)|(Start menu, type “PowerShell”)">(Cmd + Space, type “Terminal”)</span> and run:</p>
+            <div class="code" data-cmd="python-version"></div>
+            <p>You need <strong>3.10 or newer</strong>. If you get an error or an older version, install the latest one from <a href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org</a><span data-os-text="|. In the installer, tick “Add Python to PATH”"></span>, then open a new window and try again.</p>
+            <button type="button" class="button done-btn">Mark as done</button>
+          </div></div>
+        </li>
+
+        <!-- 2 -->
+        <li class="step" id="step-2" data-step="2">
+          <div class="step-head">
+            <span class="badge" aria-hidden="true"><span class="num">2</span><svg class="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            <div class="step-title"><h3>Download the bot</h3><p class="step-meta">1 minute</p></div>
+          </div>
+          <div class="step-body"><div class="step-inner">
+            <p>This makes a folder called <code>nhas-bot</code> in your home folder and downloads the bot into it.</p>
+            <div class="code" data-cmd="download"></div>
+            <p class="muted">Every command from here on runs inside this folder. If you open a new window later, run <code>cd nhas-bot</code> first.</p>
+            <button type="button" class="button done-btn">Mark as done</button>
+          </div></div>
+        </li>
+
+        <!-- 3 -->
+        <li class="step" id="step-3" data-step="3">
+          <div class="step-head">
+            <span class="badge" aria-hidden="true"><span class="num">3</span><svg class="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            <div class="step-title"><h3>Set up your phone</h3><p class="step-meta">3 minutes</p></div>
+          </div>
+          <div class="step-body"><div class="step-inner">
+            <ol class="sub">
+              <li>On your phone, log in at <a href="https://citychickennhas.de/bestellen/en/koeln" target="_blank" rel="noopener">citychickennhas.de/bestellen</a>. This is where you'll order and pay later.</li>
+              <li>Install the free <strong>ntfy</strong> app for push notifications: <a href="https://apps.apple.com/app/ntfy/id1625396347" target="_blank" rel="noopener">iPhone</a> or <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noopener">Android</a>. No account needed.</li>
+              <li>In the app, tap <strong>+</strong> and subscribe to this topic. Anyone who knows the name can read it, so keep it random.</li>
+            </ol>
+            <div class="field-row">
+              <label class="field grow">
+                <span class="field-label">Your topic</span>
+                <input id="topic" type="text" autocomplete="off" spellcheck="false" inputmode="text">
+              </label>
+              <button type="button" class="button" id="topic-new">New</button>
+              <button type="button" class="button" id="topic-copy">Copy</button>
+            </div>
+            <button type="button" class="button done-btn">Mark as done</button>
+          </div></div>
+        </li>
+
+        <!-- 4 -->
+        <li class="step" id="step-4" data-step="4">
+          <div class="step-head">
+            <span class="badge" aria-hidden="true"><span class="num">4</span><svg class="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            <div class="step-title"><h3>Give the bot its own login</h3><p class="step-meta">5 minutes</p></div>
+          </div>
+          <div class="step-body"><div class="step-inner">
+            <p>The bot uses your login, but it needs a <strong>separate</strong> one. The site renews logins every hour, and if your browser and the bot share one they get in each other's way.</p>
+            <ol class="sub">
+              <li>On your computer, open a <strong>private window</strong> (<span data-os-text="Cmd + Shift + N|Ctrl + Shift + N">Cmd + Shift + N</span> in Chrome) and log in at <a href="https://citychickennhas.de/bestellen/en/koeln" target="_blank" rel="noopener">citychickennhas.de/bestellen</a>.</li>
+              <li>Open the developer tools with <strong data-os-text="Cmd + Option + I|F12">Cmd + Option + I</strong>, click the <strong>Network</strong> tab, and reload the page.</li>
+              <li>Click the request called <code>me</code>. Under <strong>Request Headers</strong>, find <code>cookie</code> and copy its whole value, from <code>bp-auth-token.0=</code> to the end.</li>
+              <li>Back in <span data-os-text="Terminal|PowerShell">Terminal</span>, create the file and paste it in:</li>
+            </ol>
+            <div class="code" data-cmd="cookie"></div>
+            <p class="muted" data-os-text="Paste with Cmd + V, then save with Ctrl + O, Enter, and close with Ctrl + X.|Notepad opens. Click “Yes” to create the file, paste with Ctrl + V, save with Ctrl + S and close it.">Paste with Cmd + V, then save with Ctrl + O, Enter, and close with Ctrl + X.</p>
+            <ol class="sub" start="5">
+              <li><strong>Close the private window. Don't log out there</strong>, logging out ends the bot's login too.</li>
+            </ol>
+            <div class="callout">
+              <strong>Your cookie is your login.</strong> Never paste it into a website or chat, including this one. It only ever lives in <code>cookie.txt</code> on your computer.
+            </div>
+            <button type="button" class="button done-btn">Mark as done</button>
+          </div></div>
+        </li>
+
+        <!-- 5 -->
+        <li class="step" id="step-5" data-step="5">
+          <div class="step-head">
+            <span class="badge" aria-hidden="true"><span class="num">5</span><svg class="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            <div class="step-title"><h3>Test it</h3><p class="step-meta">1 minute</p></div>
+          </div>
+          <div class="step-body"><div class="step-inner">
+            <p>First check the login. This only looks and never reserves anything:</p>
+            <div class="code" data-cmd="dry-run"></div>
+            <p>It should say <code>Logged in as</code> with your email, then list the days. Now check that your phone buzzes:</p>
+            <div class="code" data-cmd="test-push"></div>
+            <button type="button" class="button done-btn">Mark as done</button>
+          </div></div>
+        </li>
+
+        <!-- 6 -->
+        <li class="step" id="step-6" data-step="6">
+          <div class="step-head">
+            <span class="badge" aria-hidden="true"><span class="num">6</span><svg class="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            <div class="step-title"><h3>Pick your slot and start</h3><p class="step-meta">1 minute</p></div>
+          </div>
+          <div class="step-body"><div class="step-inner">
+            <div class="form-grid">
+              <div class="field">
+                <span class="field-label" id="party-label">People</span>
+                <div class="stepper" role="group" aria-labelledby="party-label">
+                  <button type="button" class="stepper-btn" data-delta="-1" aria-label="Fewer people">−</button>
+                  <output id="party" aria-live="polite">2</output>
+                  <button type="button" class="stepper-btn" data-delta="1" aria-label="More people">+</button>
+                </div>
+              </div>
+              <label class="field">
+                <span class="field-label">Day</span>
+                <input id="date" type="date">
+                <span class="field-help">Leave empty for any day</span>
+              </label>
+              <label class="field">
+                <span class="field-label">Earliest</span>
+                <input id="earliest" type="time" step="900">
+              </label>
+              <label class="field">
+                <span class="field-label">Latest</span>
+                <input id="latest" type="time" step="900">
+              </label>
+            </div>
+            <p>Run this and leave the window open:</p>
+            <div class="code" data-cmd="run"></div>
+            <p class="muted" data-os-text="caffeinate keeps your Mac awake while the bot runs. Keep the lid open: closing it still puts the Mac to sleep.|Keep your PC awake: Settings, System, Power, set “When plugged in, put my device to sleep after” to Never.">caffeinate keeps your Mac awake while the bot runs. Keep the lid open: closing it still puts the Mac to sleep.</p>
+            <button type="button" class="button done-btn">Mark as done</button>
+          </div></div>
+        </li>
+
+        <!-- 7 -->
+        <li class="step" id="step-7" data-step="7">
+          <div class="step-head">
+            <span class="badge" aria-hidden="true"><span class="num">7</span><svg class="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            <div class="step-title"><h3>When your phone buzzes</h3><p class="step-meta">The fun part</p></div>
+          </div>
+          <div class="step-body"><div class="step-inner">
+            <ol class="sub">
+              <li>You get <strong>“Slot reserved!”</strong>. Tap it and the order page opens, with your slot already held.</li>
+              <li>Pick your food and pay on your phone: card, Klarna, Apple Pay or Google Pay.</li>
+              <li>No rush. The bot keeps the slot held for up to 30 minutes until you reach checkout.</li>
+            </ol>
+            <button type="button" class="button done-btn">Mark as done</button>
+          </div></div>
+        </li>
+      </ol>
+
+      <div class="finished" id="finished" hidden>
+        <span class="finished-icon" aria-hidden="true">🍗</span>
+        <h3>All set. Enjoy your chicken.</h3>
+        <button type="button" class="button" id="reset">Start over</button>
+      </div>
+    </section>
+
+    <section class="faq" aria-labelledby="faq-title">
+      <h2 id="faq-title" class="section-title">Questions</h2>
+
+      <details class="qa" id="new-days">
+        <summary>When do new days open for booking?</summary>
+        <div class="qa-body"><p id="new-day-text"></p></div>
+      </details>
+
+      <details class="qa">
+        <summary>Does it keep running on its own?</summary>
+        <div class="qa-body">
+          <p>Yes. It checks every 30 seconds until it holds a slot, keeps that hold alive until you check out, then stops. It also stops if your computer sleeps, you close the window, or your login ends. Stop it any time with <code>Ctrl + C</code>.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>Do I need to be at my computer to pay?</summary>
+        <div class="qa-body">
+          <p>No. The hold belongs to your account, not your computer. Any device where you're logged in shows it, so you can order and pay on your phone.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>I already have a slot. Will the bot replace it?</summary>
+        <div class="qa-body">
+          <p>Probably. You can only hold one slot at a time, so if the bot holds a new one, your old hold most likely gets swapped out. Only run the bot with a day and time window you'd prefer over what you have.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>It says “Not logged in”.</summary>
+        <div class="qa-body">
+          <p>The bot's login ended, usually because you logged out somewhere on the site. Repeat step 4 to make a fresh <code>cookie.txt</code>.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>It says PHONE_NOT_VERIFIED or TERMS_UPDATE_REQUIRED.</summary>
+        <div class="qa-body">
+          <p>The site wants something from you first. Open it in your browser, do what it asks, then start the bot again.</p>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>Is my data sent anywhere?</summary>
+        <div class="qa-body">
+          <p>The bot only talks to the Nhas ordering site, as you, and to ntfy for the push. This website stores nothing about you: your progress and topic stay in your own browser.</p>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Unofficial and not affiliated with Nhas City Chicken. Please be kind: one bot per person, and don't lower the 30 second check interval.</p>
+  </footer>
+
+  <div class="toaster" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

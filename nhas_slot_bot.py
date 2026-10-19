@@ -209,10 +209,20 @@ def slot_ok(slot: dict, f: Filters, min_lead_minutes: int) -> bool:
     return True
 
 
-def find_slot(client: Client, store_id: str, f: Filters) -> dict | None:
-    """Return the earliest matching free slot across the wanted dates, or None."""
+def find_slot(client: Client, store_id: str, f: Filters, known_days: set[str]) -> dict | None:
+    """Return the earliest matching free slot across the wanted dates, or None.
+
+    Also adds every bookable date to `known_days` and logs the ones not seen before,
+    which tells us when the store opens up a new day for booking.
+    """
     first = client.slots(store_id, f.dates[0] if f.dates else datetime.now(TZ).date().isoformat(), f.party)
     bookable = first.get("bookableDates") or []
+    new_days = sorted(set(bookable) - known_days)
+    if new_days and known_days:
+        log(f"NEW DAY OPENED: {', '.join(new_days)} (first seen now)")
+    elif new_days:
+        log(f"Bookable days right now: {', '.join(bookable)}")
+    known_days.update(bookable)
     if f.dates:
         days = [d for d in f.dates if not bookable or d in bookable]
     else:
@@ -348,10 +358,15 @@ def main(argv: list[str]) -> int:
     store_id = store["id"]
     log(f"Store {args.store!r} -> id {store_id}")
 
+    known_days: set[str] = set()
     while True:
         wait = args.interval
         try:
-            slot = find_slot(client, store_id, filters)
+            before = set(known_days)
+            slot = find_slot(client, store_id, filters, known_days)
+            if before and known_days - before:
+                days = ", ".join(sorted(known_days - before))
+                notify.send("New day open for booking", f"{days} opened at {datetime.now(TZ):%H:%M}.", click=page)
             if slot is None:
                 log("No matching slot free yet.")
             elif args.dry_run:
