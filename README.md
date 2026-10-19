@@ -84,6 +84,8 @@ to get to your phone. It stops when:
 | `--ntfy-topic` | `$NHAS_NTFY_TOPIC` | ntfy topic for phone pushes |
 | `--keep-held` | 30 | Minutes to keep renewing the hold, 0 = off |
 | `--test-push` | off | Send a test push and exit |
+| `--keep-going` | off | Keep looking after a slot you didn't take, skipping it from then on |
+| `--declined-file` | declined.txt | Where skipped slots are remembered |
 
 ## How it works
 
@@ -94,6 +96,22 @@ The site's frontend calls a JSON API under `/bestellen/api`. The bot uses the sa
 same rule the site uses.
 
 If you get "Not logged in", your cookie expired: copy a fresh one.
+
+## Keep going after a reservation
+
+With `--keep-going` the bot doesn't stop after holding a slot. It watches what you do with it:
+
+- **You pay** → it sends "Booked!" and stops.
+- **You release it, cancel the order, or let it run out** → it remembers that slot in
+  `declined.txt`, never grabs it again, and keeps looking for another one.
+- **You pick a different slot yourself** → it stops, so it never fights you.
+
+It also never replaces a slot you're already holding: if something matching frees up while you
+hold one, it only sends a push. Delete `declined.txt` to make it consider old slots again.
+
+```bash
+caffeinate -i python3 nhas_slot_bot.py --party 2 --keep-going --ntfy-topic YOUR-TOPIC
+```
 
 ## New bookable days
 

@@ -10,6 +10,7 @@ talks to a small JSON API under /bestellen/api. This script uses the same endpoi
                                                 -> {date, today, bookableDates, rules, slots:[...]}
     POST /holds {store, scheduledAt, partySize} -> reserves the slot for ~10 minutes
     GET  /holds                                 -> your current hold (or null)
+    GET  /orders/<number>                       -> order status, to tell "paid" from "cancelled"
 
 Re-posting a hold for the same slot renews it, which is what the site's own
 "extend" button does. Push notifications go through ntfy (https://ntfy.sh).
@@ -31,7 +32,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from email.utils import parsedate_to_datetime
 from datetime import date, datetime, time as dtime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -146,6 +147,9 @@ class Client:
     def current_hold(self):
         return self.request("GET", "/holds")
 
+    def order(self, number):
+        return self.request("GET", f"/orders/{number}")
+
     def hold(self, store_id: str, scheduled_at: str, party: int):
         return self.request(
             "POST", "/holds", body={"store": store_id, "scheduledAt": scheduled_at, "partySize": party}
@@ -159,6 +163,7 @@ class Filters:
     earliest: dtime | None
     latest: dtime | None
     max_days_ahead: int
+    declined: set[str] = field(default_factory=set)  # slot starts you already passed on
 
 
 class Notifier:
@@ -195,7 +200,7 @@ def log(msg: str) -> None:
 
 def slot_ok(slot: dict, f: Filters, min_lead_minutes: int) -> bool:
     """Mirror the site's own rule: bookable, enough room, not too soon, inside our window."""
-    if not slot.get("bookable"):
+    if not slot.get("bookable") or slot["start"] in f.declined:
         return False
     if (slot.get("remainingPersons") or 0) < f.party:
         return False
@@ -246,50 +251,100 @@ def seconds_left(hold: dict) -> float:
     return (parse_ts(hold["expiresAt"]) - now).total_seconds()
 
 
-def keep_held(client: Client, hold: dict, minutes: float, notify: Notifier, page: str) -> int:
-    """Renew the hold until you start paying, give it up, or `minutes` have passed."""
+TAKEN, DECLINED, OTHER_SLOT, LOGGED_OUT = "taken", "declined", "other slot", "logged out"
+
+
+def order_outcome(client: Client, number) -> str | None:
+    """TAKEN once paid, DECLINED once cancelled, None while it's still open."""
+    try:
+        order = client.order(number) or {}
+    except (ApiError, urllib.error.URLError, TimeoutError, ConnectionError) as e:
+        log(f"Could not check order {number}: {e}")
+        return None
+    if order.get("paymentStatus") == "paid" or order.get("status") in {"confirmed", "fulfilled", "no_show"}:
+        return TAKEN
+    if order.get("status") == "cancelled" or order.get("paymentStatus") == "refunded":
+        return DECLINED
+    return None
+
+
+def watch_hold(client: Client, hold: dict, minutes: float, notify: Notifier, page: str) -> str:
+    """Follow a hold until you take it or let it go, renewing it for up to `minutes`.
+
+    Returns TAKEN (you paid), DECLINED (released, cancelled or left to expire),
+    OTHER_SLOT (you picked a different slot yourself) or LOGGED_OUT.
+    """
     start = hold["slot"]["start"]
     deadline = time.monotonic() + minutes * 60
-    log(f"Keeping the slot held for up to {minutes:g} min. Ctrl+C to stop (the hold then just runs out).")
+    order_no = hold.get("orderNumber")
+    warned = False
+    if minutes > 0:
+        log(f"Keeping the slot held for up to {minutes:g} min while you order.")
     while True:
         try:
             cur = client.current_hold()
         except ApiError as e:
             if e.status == 401:
-                notify.send("Bot logged out", "Cookie expired, can't extend. Finish the order now!", click=page, urgent=True)
-                log("Session expired, can't extend anymore.")
-                return 1
+                notify.send("Bot logged out", "Cookie expired, can't watch your slot. Finish the order now!", click=page, urgent=True)
+                log("Session expired, can't watch the hold anymore.")
+                return LOGGED_OUT
             log(f"Could not check the hold: {e}")
             cur = hold
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
             log(f"Network error while checking the hold: {e}")
             cur = hold
 
-        if not cur:
-            log("Hold is gone (order placed, released, or expired). Done.")
-            return 0
-        if cur.get("orderNumber") is not None:
-            log("You're in checkout. The site keeps the slot while you pay, so I stop extending.")
-            return 0
-        if cur["slot"]["start"] != start:
-            log("You picked a different slot in the browser. Stopping.")
-            return 0
+        if cur and cur["slot"]["start"] != start:
+            log("You picked a different slot in the browser.")
+            return OTHER_SLOT
+        if cur and cur.get("orderNumber") is not None:
+            if order_no is None:
+                log("You're in checkout. The site keeps the slot while you pay.")
+            order_no = cur["orderNumber"]
 
-        left = seconds_left(cur)
-        if left < EXTEND_BELOW_S:
-            if time.monotonic() > deadline:
-                notify.send("Slot hold running out", f"Stopped extending after {minutes:g} min. "
-                            f"About {max(left, 0):.0f}s left.", click=page, urgent=True)
+        if order_no is not None:
+            outcome = order_outcome(client, order_no)
+            if outcome:
+                log("Order paid. Enjoy!" if outcome == TAKEN else "Order cancelled.")
+                return outcome
+            if not cur:
+                # hold gone but order not settled yet: keep polling the order
+                time.sleep(HOLD_CHECK_S)
+                continue
+        elif not cur:
+            log("Hold is gone: you released it or let it expire.")
+            return DECLINED
+        else:
+            left = seconds_left(cur)
+            if left < EXTEND_BELOW_S and time.monotonic() < deadline:
+                try:
+                    cur = client.hold(cur["storeId"], start, cur["partySize"])
+                    log(f"Extended, now held until {parse_ts(cur['expiresAt']):%H:%M:%S}.")
+                except (ApiError, urllib.error.URLError, TimeoutError, ConnectionError) as e:
+                    notify.send("Could not extend your slot", f"{e}. Finish the order now!", click=page, urgent=True)
+                    log(f"Extending failed: {e}")
+            elif left < EXTEND_BELOW_S and minutes > 0 and not warned:
+                warned = True
+                notify.send("Slot hold running out", f"Stopped extending after {minutes:g} min.", click=page, urgent=True)
                 log("Max keep time reached, letting the hold run out.")
-                return 0
-            try:
-                cur = client.hold(cur["storeId"], start, cur["partySize"])
-                log(f"Extended, now held until {parse_ts(cur['expiresAt']):%H:%M:%S}.")
-            except (ApiError, urllib.error.URLError, TimeoutError, ConnectionError) as e:
-                notify.send("Could not extend your slot", f"{e}. Finish the order now!", click=page, urgent=True)
-                log(f"Extending failed: {e}")
-        hold = cur
-        time.sleep(min(HOLD_CHECK_S, max(left - EXTEND_BELOW_S + 5, 5)))
+        hold = cur or hold
+        time.sleep(HOLD_CHECK_S)
+
+
+def load_declined(path: str) -> set[str]:
+    """Slot starts declined in earlier runs, minus the ones already in the past."""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            starts = {line.strip() for line in fh if line.strip()}
+    except FileNotFoundError:
+        return set()
+    now = datetime.now(TZ)
+    return {s for s in starts if parse_ts(s) > now}
+
+
+def save_declined(path: str, starts: set[str]) -> None:
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("".join(f"{s}\n" for s in sorted(starts)))
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -313,6 +368,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--keep-held", type=float, default=30, metavar="MINUTES",
                    help="Keep renewing the hold for up to this long until you check out (default: 30, 0 = off)")
     p.add_argument("--test-push", action="store_true", help="Send a test push notification and exit")
+    p.add_argument("--keep-going", action="store_true",
+                   help="After a reservation, wait to see if you take it. If you release it or let it expire, "
+                        "skip that slot from now on and keep looking. Stops once you pay")
+    p.add_argument("--declined-file", default="declined.txt",
+                   help="Where --keep-going remembers slots you passed on (default: declined.txt)")
     return p.parse_args(argv)
 
 
@@ -345,6 +405,10 @@ def main(argv: list[str]) -> int:
         log("Note: cookie given via --cookie/$NHAS_COOKIE, so renewed logins are not saved. Use cookie.txt for long runs.")
     client = Client(cookie, args.locale, save_to=cookie_file)
     filters = Filters(args.party, args.dates, args.earliest, args.latest, args.days_ahead)
+    if args.keep_going:
+        filters.declined = load_declined(args.declined_file)
+        if filters.declined:
+            log(f"Skipping {len(filters.declined)} slot(s) you passed on before (in {args.declined_file}).")
 
     try:
         me = client.me()
@@ -359,6 +423,7 @@ def main(argv: list[str]) -> int:
     log(f"Store {args.store!r} -> id {store_id}")
 
     known_days: set[str] = set()
+    told_busy: set[str] = set()  # free slots we already told you about while you held another
     while True:
         wait = args.interval
         try:
@@ -374,6 +439,13 @@ def main(argv: list[str]) -> int:
                 log(f"Free: {msg}. Dry run, not reserving.")
                 notify.send("Free slot found", msg, click=page)
                 return 0
+            elif (mine := client.current_hold()) and mine["slot"]["start"] != slot["start"]:
+                # never swap out a slot you're already holding yourself
+                msg = f"{parse_ts(slot['start']):%a %d.%m %H:%M} is free, but you already hold {parse_ts(mine['slot']['start']):%a %d.%m %H:%M}."
+                if slot["start"] not in told_busy:
+                    told_busy.add(slot["start"])
+                    log(msg + " Not replacing it.")
+                    notify.send("Free slot, not grabbed", msg + " Release yours to let me grab it.", click=page)
             else:
                 start = parse_ts(slot["start"])
                 log(f"Reserving {start:%a %d.%m %H:%M} for {args.party} ...")
@@ -394,9 +466,18 @@ def main(argv: list[str]) -> int:
                     keep = f" I keep it held for up to {args.keep_held:g} min." if args.keep_held > 0 else ""
                     notify.send("Slot reserved!", f"{what}{until}.{keep} Tap to order and pay.",
                                 click=page, urgent=True)
-                    if args.keep_held > 0 and expires:
-                        return keep_held(client, hold, args.keep_held, notify, page)
-                    return 0
+                    if not args.keep_going and not (args.keep_held > 0 and expires):
+                        return 0
+                    outcome = watch_hold(client, hold, args.keep_held, notify, page)
+                    if not args.keep_going or outcome != DECLINED:
+                        if outcome == TAKEN:
+                            notify.send("Booked!", f"{what} is yours. Bot stopped.", click=page)
+                        return 1 if outcome == LOGGED_OUT else 0
+                    filters.declined.add(slot["start"])
+                    save_declined(args.declined_file, filters.declined)
+                    log(f"Skipping {what} from now on. Still looking ...")
+                    notify.send("Okay, skipped", f"I won't offer {what} again. Still looking.")
+                    continue
         except ApiError as e:
             if e.status == 401:
                 log("Session expired. Copy a fresh cookie from your browser.")
