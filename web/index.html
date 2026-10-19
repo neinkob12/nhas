@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Slot Bot for Nhas Köln</title>
   <meta name="description" content="Set up a small bot on your own computer that watches Nhas City Chicken Köln for a free table and holds it for you.">
-  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f6f4e4" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#17100a" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍗</text></svg>">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -39,17 +39,17 @@
       <h2 id="how-title" class="section-title">How it works</h2>
       <div class="tiles">
         <article class="tile">
-          <span class="tile-icon" aria-hidden="true">👀</span>
+          <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span>
           <h3>Watches</h3>
           <p>Checks the booking page every 30 seconds for a slot that fits your day, time and group size.</p>
         </article>
         <article class="tile">
-          <span class="tile-icon" aria-hidden="true">✋</span>
+          <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 2h4"/><path d="M12 14l3-3"/><circle cx="12" cy="14" r="8"/></svg></span>
           <h3>Holds</h3>
           <p>Grabs it instantly, like clicking it yourself, and keeps renewing the 10 minute hold until you check out.</p>
         </article>
         <article class="tile">
-          <span class="tile-icon" aria-hidden="true">📱</span>
+          <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
           <h3>Buzzes you</h3>
           <p>Sends a push to your phone. Tap it, pick your food, pay with Apple Pay. Done.</p>
         </article>
@@ -107,7 +107,7 @@
                 <input id="topic" type="text" autocomplete="off" spellcheck="false" inputmode="text">
               </label>
               <button type="button" class="button" id="topic-new">New</button>
-              <button type="button" class="button" id="topic-copy">Copy</button>
+              <button type="button" class="button" id="topic-copy"><span class="copy-label"><span>Copy</span><span aria-hidden="true">Copied</span></span></button>
             </div>
             <button type="button" class="button done-btn">Mark as done</button>
           </div></div>
@@ -272,6 +272,7 @@
   </footer>
 
   <div class="toaster" aria-live="polite" aria-atomic="true"></div>
+  <p class="sr-only" id="announcer" aria-live="polite"></p>
 
   <script src="app.js"></script>
 </body>

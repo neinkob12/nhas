@@ -5,6 +5,9 @@ const NEW_DAYS_INFO = "";
 
 const STORAGE_KEY = "nhas-slot-bot";
 const BOT_FILE = "nhas_slot_bot.py";
+// matches the .step-body transition in styles.css
+const COLLAPSE_MS = 200;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
 const state = load();
 
@@ -77,7 +80,7 @@ function renderCommands() {
       const copy = document.createElement("button");
       copy.type = "button";
       copy.className = "copy";
-      copy.innerHTML = '<span class="copy-label">Copy</span>';
+      copy.innerHTML = '<span class="copy-label"><span>Copy</span><span aria-hidden="true">Copied</span></span>';
       copy.addEventListener("click", () => copyText(block.dataset.text, copy));
       block.append(pre, copy);
     }
@@ -110,6 +113,9 @@ function renderCommands() {
 
 // ---------- Copy + toast ----------
 
+// Success shows on the button itself, where the user is looking. The toast is only for errors.
+const announcer = document.getElementById("announcer");
+
 async function copyText(text, button) {
   try {
     await navigator.clipboard.writeText(text);
@@ -117,24 +123,11 @@ async function copyText(text, button) {
     toast("Couldn't copy. Select the text instead.");
     return;
   }
-  toast("Copied");
-  if (button) {
-    const label = button.querySelector(".copy-label");
-    if (!label) return;
-    button.classList.add("swap");
-    setTimeout(() => {
-      label.textContent = "Copied";
-      button.classList.remove("swap");
-    }, 120);
-    clearTimeout(button._reset);
-    button._reset = setTimeout(() => {
-      button.classList.add("swap");
-      setTimeout(() => {
-        label.textContent = "Copy";
-        button.classList.remove("swap");
-      }, 120);
-    }, 1600);
-  }
+  announcer.textContent = "";
+  requestAnimationFrame(() => (announcer.textContent = "Copied"));
+  button.classList.add("copied");
+  clearTimeout(button._reset);
+  button._reset = setTimeout(() => button.classList.remove("copied"), 1600);
 }
 
 const toaster = document.querySelector(".toaster");
@@ -157,7 +150,9 @@ const segmented = document.querySelector(".segmented");
 function renderOs() {
   segmented.dataset.value = state.os;
   segmented.querySelectorAll("button").forEach((b) => {
-    b.setAttribute("aria-checked", String(b.dataset.os === state.os));
+    const checked = b.dataset.os === state.os;
+    b.setAttribute("aria-checked", String(checked));
+    b.tabIndex = checked ? 0 : -1;
   });
   document.querySelectorAll("[data-os-text]").forEach((el) => {
     const [mac, win] = el.dataset.osText.split("|");
@@ -166,18 +161,48 @@ function renderOs() {
   renderCommands();
 }
 
-segmented.addEventListener("click", (e) => {
-  const b = e.target.closest("button[data-os]");
-  if (!b || b.dataset.os === state.os) return;
-  state.os = b.dataset.os;
+function setOs(os) {
+  if (os === state.os) return;
+  state.os = os;
   save();
   renderOs();
+}
+
+segmented.addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-os]");
+  if (b) setOs(b.dataset.os);
+});
+
+// a radio group moves with the arrow keys
+segmented.addEventListener("keydown", (e) => {
+  if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+  e.preventDefault();
+  setOs(state.os === "mac" ? "win" : "mac");
+  segmented.querySelector(`[data-os="${state.os}"]`).focus();
 });
 
 // ---------- Steps ----------
 
 const steps = [...document.querySelectorAll(".step")];
 document.getElementById("total-count").textContent = steps.length;
+
+function scrollToEl(el, block) {
+  el.scrollIntoView({ behavior: reduceMotion.matches ? "auto" : "smooth", block });
+}
+
+// a finished step's header becomes a button that folds the step open and shut
+function renderHead(step) {
+  const head = step.querySelector(".step-head");
+  if (step.classList.contains("done")) {
+    head.setAttribute("role", "button");
+    head.tabIndex = 0;
+    head.setAttribute("aria-expanded", String(step.classList.contains("open")));
+  } else {
+    head.removeAttribute("role");
+    head.removeAttribute("tabindex");
+    head.removeAttribute("aria-expanded");
+  }
+}
 
 function renderSteps() {
   const done = new Set(state.done);
@@ -188,6 +213,7 @@ function renderSteps() {
     s.classList.toggle("current", s === current);
     if (!isDone) s.classList.remove("open");
     s.querySelector(".done-btn").textContent = isDone ? "Mark as not done" : "Mark as done";
+    renderHead(s);
   });
   document.getElementById("done-count").textContent = done.size;
   document.getElementById("progress-fill").style.transform = `scaleX(${done.size / steps.length})`;
@@ -203,16 +229,27 @@ steps.forEach((step) => {
       state.done.push(id);
       step.classList.remove("open");
       const next = steps.find((s) => !state.done.includes(s.dataset.step));
-      if (next) {
-        // wait for this step to collapse so the scroll target doesn't move under us
-        setTimeout(() => next.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
-      }
+      const target = next || document.getElementById("finished");
+      // wait for this step to collapse so the scroll target doesn't move under us
+      setTimeout(() => scrollToEl(target, next ? "start" : "nearest"), reduceMotion.matches ? 0 : COLLAPSE_MS);
     }
     save();
     renderSteps();
+    // the button just folded away with the step; keep keyboard focus on the step instead of losing it
+    if (step.classList.contains("done")) step.querySelector(".step-head").focus({ preventScroll: true });
   });
-  step.querySelector(".step-head").addEventListener("click", () => {
-    if (step.classList.contains("done")) step.classList.toggle("open");
+
+  const head = step.querySelector(".step-head");
+  const toggle = () => {
+    if (!step.classList.contains("done")) return;
+    step.classList.toggle("open");
+    renderHead(step);
+  };
+  head.addEventListener("click", toggle);
+  head.addEventListener("keydown", (e) => {
+    if (e.target !== head || (e.key !== "Enter" && e.key !== " ")) return;
+    e.preventDefault();
+    toggle();
   });
 });
 
@@ -220,7 +257,7 @@ document.getElementById("reset").addEventListener("click", () => {
   state.done = [];
   save();
   renderSteps();
-  steps[0].scrollIntoView({ behavior: "smooth", block: "start" });
+  scrollToEl(steps[0], "start");
 });
 
 // ---------- Topic ----------
@@ -245,7 +282,8 @@ document.getElementById("topic-new").addEventListener("click", () => {
   save();
   renderCommands();
 });
-document.getElementById("topic-copy").addEventListener("click", () => copyText(state.topic));
+const topicCopy = document.getElementById("topic-copy");
+topicCopy.addEventListener("click", () => copyText(state.topic, topicCopy));
 
 // ---------- Slot form ----------
 

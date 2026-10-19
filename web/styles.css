@@ -1,20 +1,27 @@
+/*
+  Palette: sage, burnt orange, cream and dark brown, taken from a butterfly wing.
+  Orange is the one action color, sage only ever means "done", brown is the ink.
+  Every text pair here passes WCAG AA in both color schemes.
+*/
 :root {
-  --bg: #f5f5f7;
-  --surface: #ffffff;
-  --surface-2: #f5f5f7;
-  --text: #1d1d1f;
-  --text-2: #6e6e73;
-  --line: rgba(0, 0, 0, 0.08);
-  --accent: #0071e3;
-  --accent-press: #0062c4;
-  --green: #28a745;
-  --green-soft: rgba(52, 199, 89, 0.12);
-  --green-line: rgba(52, 199, 89, 0.45);
-  --warn-soft: rgba(255, 159, 10, 0.12);
-  --code-bg: #1d1d1f;
-  --code-text: #f5f5f7;
-  --nav-bg: rgba(245, 245, 247, 0.72);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.04);
+  --bg: #f6f4e4;
+  --surface: #fdfcf8;
+  --surface-2: #f3efd9;
+  --text: #4b260e;
+  --text-2: #7d6351;
+  --line: rgba(75, 38, 14, 0.1);
+  --accent: #a1540e;
+  --accent-press: #88470c;
+  --accent-soft: rgba(161, 84, 14, 0.1);
+  --on-accent: #fdfcf8;
+  --sage: #8ba08b;
+  --sage-strong: #567656;
+  --on-sage: #ffffff;
+  --code-bg: #4b260e;
+  --code-text: #ece7c2;
+  --code-muted: #ac9a7a;
+  --nav-bg: rgba(246, 244, 228, 0.72);
+  --shadow: 0 1px 2px rgba(75, 38, 14, 0.05), 0 8px 24px rgba(75, 38, 14, 0.05);
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -25,20 +32,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #000000;
-    --surface: #1c1c1e;
-    --surface-2: #2c2c2e;
-    --text: #f5f5f7;
-    --text-2: #a1a1a6;
-    --line: rgba(255, 255, 255, 0.1);
-    --accent: #2997ff;
-    --accent-press: #0a84ff;
-    --green: #30d158;
-    --green-soft: rgba(48, 209, 88, 0.14);
-    --green-line: rgba(48, 209, 88, 0.5);
-    --warn-soft: rgba(255, 159, 10, 0.16);
-    --code-bg: #0b0b0c;
-    --nav-bg: rgba(22, 22, 23, 0.72);
+    --bg: #17100a;
+    --surface: #211810;
+    --surface-2: #2d2218;
+    --text: #ece7c2;
+    --text-2: #a8a287;
+    --line: rgba(236, 231, 194, 0.1);
+    --accent: #e08b3e;
+    --accent-press: #ea9c55;
+    --accent-soft: rgba(224, 139, 62, 0.14);
+    --on-accent: #17100a;
+    --sage-strong: #8ba08b;
+    --on-sage: #17100a;
+    --code-bg: #0f0a06;
+    --code-muted: #9a9178;
+    --nav-bg: rgba(23, 16, 10, 0.72);
     --shadow: none;
   }
 }
@@ -49,6 +57,7 @@ html {
   scroll-behavior: smooth;
   scroll-padding-top: 80px;
   -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -57,11 +66,23 @@ body {
   color: var(--text);
   font: 100%/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  -webkit-tap-highlight-color: transparent;
 }
 
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
+::selection { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+
+/* No single word left hanging on the last line */
+h1, h2, h3, .lede { text-wrap: balance; }
+p, li { text-wrap: pretty; }
+
+/* Underlines are reserved for links, so a link reads as one without relying on color */
+a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  transition: text-decoration-color 150ms ease;
+}
 
 code {
   font: 0.88em/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -72,6 +93,24 @@ code {
 }
 
 .muted { color: var(--text-2); }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Controls: no long-press text selection, no double-tap zoom delay */
+button,
+summary,
+.step-head {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
 
 /* ---------- Nav: translucent material, content scrolls under ---------- */
 
@@ -99,9 +138,10 @@ code {
   font-size: 1.05rem;
   letter-spacing: -0.01em;
   color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
   margin-right: auto;
 }
-.brand:hover { text-decoration: none; }
 
 .progress {
   display: flex;
@@ -110,6 +150,7 @@ code {
   font-size: 0.8rem;
   color: var(--text-2);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .progress-track {
   width: 72px;
@@ -122,11 +163,11 @@ code {
   display: block;
   height: 100%;
   width: 100%;
-  background: var(--green);
+  background: var(--sage-strong);
   border-radius: inherit;
   transform-origin: left;
   transform: scaleX(0);
-  transition: transform 400ms var(--ease-out);
+  transition: transform 250ms var(--ease-in-out);
 }
 
 /* Segmented control with a sliding thumb */
@@ -140,6 +181,7 @@ code {
   isolation: isolate;
 }
 .segmented button {
+  position: relative;
   appearance: none;
   border: 0;
   background: none;
@@ -162,10 +204,21 @@ code {
   height: calc(100% - 4px);
   border-radius: 7px;
   background: var(--surface);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-  transition: transform 250ms var(--ease-out);
+  box-shadow: 0 1px 3px rgba(75, 38, 14, 0.14);
+  transition: transform 250ms var(--ease-in-out);
 }
 .segmented[data-value="win"] .segmented-thumb { transform: translateX(100%); }
+
+/* Small controls get a 44px hit area without growing visually */
+.segmented button::after,
+.copy::after,
+.stepper-btn::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+.segmented button::after { inset: -10px 0; }
+.stepper-btn::after { inset: -5px; }
 
 /* ---------- Layout ---------- */
 
@@ -179,6 +232,19 @@ main {
   text-align: center;
   padding: 88px 0 56px;
 }
+/* First visit only, so it may take a beat: a short stagger, never blocking clicks */
+.hero > * { animation: rise 300ms var(--ease-out) backwards; }
+.hero > :nth-child(2) { animation-delay: 50ms; }
+.hero > :nth-child(3) { animation-delay: 100ms; }
+.hero > :nth-child(4) { animation-delay: 150ms; }
+.hero > :nth-child(5) { animation-delay: 200ms; }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+}
+@keyframes fade {
+  from { opacity: 0; }
+}
+
 .eyebrow {
   margin: 0 0 12px;
   font-size: 0.85rem;
@@ -232,9 +298,27 @@ h1 {
   padding: 22px;
   box-shadow: var(--shadow);
 }
-.tile-icon { font-size: 1.75rem; }
+.tile-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.tile-icon svg,
+.icon {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .tile h3 {
-  margin: 10px 0 4px;
+  margin: 14px 0 4px;
   font-size: 1.1rem;
   letter-spacing: -0.015em;
 }
@@ -260,29 +344,23 @@ h1 {
   font-weight: 500;
   color: var(--accent);
   background: var(--surface-2);
+  text-decoration: none;
   cursor: pointer;
-  user-select: none;
   white-space: nowrap;
   transition: transform 160ms var(--ease-out), background-color 200ms ease, color 200ms ease;
 }
-.button:hover { text-decoration: none; }
 .button:active { transform: scale(0.97); }
-.button:focus-visible,
-.segmented button:focus-visible,
-.stepper-btn:focus-visible,
-summary:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  outline-offset: 2px;
-}
 .button.primary {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
 }
-.button.primary:hover { background: var(--accent-press); }
 .button.large {
   padding: 13px 28px;
   font-size: 1.05rem;
 }
+
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
+a:focus-visible { border-radius: 4px; }
 
 /* ---------- Steps ---------- */
 
@@ -302,12 +380,12 @@ summary:focus-visible {
   box-shadow: var(--shadow);
   outline: 1px solid transparent;
   outline-offset: -1px;
-  transition: outline-color 300ms ease, background-color 300ms ease;
+  transition: outline-color 200ms ease, background-color 200ms ease;
 }
 .step.current { outline-color: color-mix(in srgb, var(--accent) 35%, transparent); }
 .step.done {
-  outline-color: var(--green-line);
-  background: linear-gradient(var(--green-soft), var(--green-soft)), var(--surface);
+  outline-color: color-mix(in srgb, var(--sage) 55%, transparent);
+  background-color: color-mix(in srgb, var(--sage) 12%, var(--surface));
 }
 
 .step-head {
@@ -315,9 +393,10 @@ summary:focus-visible {
   align-items: center;
   gap: 14px;
   padding: 18px 22px;
-  cursor: default;
+  border-radius: var(--radius);
 }
 .step.done .step-head { cursor: pointer; }
+.step-title { flex: 1; min-width: 0; }
 
 .badge {
   position: relative;
@@ -332,14 +411,15 @@ summary:focus-visible {
   font-weight: 600;
   font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
-  transition: background-color 300ms ease, color 300ms ease, transform 300ms var(--ease-out);
+  transition: background-color 200ms ease, color 200ms ease;
 }
-.step.current .badge { background: var(--accent); color: #fff; }
-.step.done .badge { background: var(--green); color: #fff; }
+.step.current .badge { background: var(--accent); color: var(--on-accent); }
+.step.done .badge { background: var(--sage-strong); color: var(--on-sage); }
 
 .badge .num,
 .badge .check { grid-area: 1 / 1; }
-.badge .num { transition: opacity 150ms ease, transform 200ms var(--ease-out); }
+.badge .num { transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out); }
+/* The check wipes in from the left; un-checking snaps back faster than it drew */
 .badge .check {
   width: 18px;
   height: 18px;
@@ -348,12 +428,14 @@ summary:focus-visible {
   stroke-width: 2.6;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 22;
-  stroke-dashoffset: 22;
-  transition: stroke-dashoffset 350ms var(--ease-out) 60ms;
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 150ms var(--ease-out);
 }
-.step.done .badge .num { opacity: 0; transform: scale(0.8); }
-.step.done .badge .check { stroke-dashoffset: 0; }
+.step.done .badge .num { opacity: 0; transform: scale(0.9); }
+.step.done .badge .check {
+  clip-path: inset(0 0 0 0);
+  transition: clip-path 250ms var(--ease-out) 50ms;
+}
 
 .step-title h3 {
   margin: 0;
@@ -366,18 +448,40 @@ summary:focus-visible {
   font-size: 0.82rem;
   color: var(--text-2);
 }
-.step.done .step-meta::after { content: " · Done, tap to reopen"; }
-.step.done.open .step-meta::after { content: " · Done"; }
+.step.done .step-meta::after { content: " · Done"; }
 
-/* Collapsible body: animate grid rows 0fr -> 1fr so height follows content */
+/* Same chevron as the questions below: a finished step folds like they do */
+.qa summary::after,
+.step.done .step-head::after {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-right: 2px solid var(--text-2);
+  border-bottom: 2px solid var(--text-2);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 200ms var(--ease-in-out);
+}
+.qa[open] summary::after,
+.step.done.open .step-head::after { transform: translateY(2px) rotate(-135deg); }
+
+/* Collapsible body: animate grid rows 0fr -> 1fr so height follows content.
+   Content fades a beat before the space closes, and stays out of the tab order while closed. */
 .step-body {
   display: grid;
   grid-template-rows: 1fr;
-  transition: grid-template-rows 350ms var(--ease-out), opacity 250ms ease;
+  transition:
+    grid-template-rows 200ms var(--ease-out),
+    opacity 200ms var(--ease-out),
+    visibility 0s;
 }
 .step.done:not(.open) .step-body {
   grid-template-rows: 0fr;
   opacity: 0;
+  visibility: hidden;
+  transition-duration: 200ms, 150ms, 0s;
+  transition-delay: 0s, 0s, 200ms;
 }
 .step-inner {
   overflow: hidden;
@@ -387,6 +491,9 @@ summary:focus-visible {
 .step-inner > :first-child { margin-top: 0; }
 .step-inner > :last-child { margin-bottom: 22px; }
 .step-inner p { margin: 0 0 14px; }
+.step-inner p,
+.sub,
+.qa-body p { max-width: 65ch; }
 
 .sub {
   margin: 0 0 14px;
@@ -402,7 +509,7 @@ summary:focus-visible {
   margin: 0 0 16px;
   padding: 14px 16px;
   border-radius: 14px;
-  background: var(--warn-soft);
+  background: var(--accent-soft);
   font-size: 0.93rem;
 }
 
@@ -417,14 +524,14 @@ summary:focus-visible {
 }
 .code pre {
   margin: 0;
-  padding: 14px 76px 14px 16px;
+  padding: 14px 84px 14px 16px;
   font: 0.86rem/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   /* wrap instead of scrolling so text never slides under the copy button */
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .code pre .nowrap { white-space: nowrap; }
-.code pre .prompt { color: #86868b; user-select: none; }
+.code pre .prompt { color: var(--code-muted); user-select: none; }
 .copy {
   position: absolute;
   top: 8px;
@@ -437,14 +544,23 @@ summary:focus-visible {
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--code-text);
-  background: rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--code-text) 12%, transparent);
   cursor: pointer;
   transition: transform 160ms var(--ease-out), background-color 200ms ease;
 }
-.copy:hover { background: rgba(255, 255, 255, 0.2); }
 .copy:active { transform: scale(0.95); }
-.copy-label { display: inline-block; transition: filter 200ms ease, opacity 200ms ease; }
-.copy.swap .copy-label { filter: blur(2px); opacity: 0; }
+
+/* "Copy" and "Copied" share one cell, so the button never changes width.
+   A 2px blur blends the two words into one change instead of two overlapping labels. */
+.copy-label { display: inline-grid; }
+.copy-label > span {
+  grid-area: 1 / 1;
+  text-align: center;
+  transition: filter 200ms ease, opacity 200ms ease;
+}
+.copy-label > :last-child,
+.copied .copy-label > :first-child { opacity: 0; filter: blur(2px); }
+.copied .copy-label > :last-child { opacity: 1; filter: none; }
 
 /* ---------- Form ---------- */
 
@@ -459,6 +575,7 @@ summary:focus-visible {
 .field-label { font-size: 0.82rem; font-weight: 600; color: var(--text-2); }
 .field-help { font-size: 0.78rem; color: var(--text-2); }
 
+/* 16px minimum everywhere: anything smaller makes iOS zoom the page on focus */
 input[type="text"],
 input[type="date"],
 input[type="time"] {
@@ -479,7 +596,7 @@ input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
 }
-#topic { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.92rem; }
+#topic { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
 
 .form-grid {
   display: grid;
@@ -505,6 +622,7 @@ input:focus {
   font-variant-numeric: tabular-nums;
 }
 .stepper-btn {
+  position: relative;
   appearance: none;
   border: 0;
   width: 34px;
@@ -517,8 +635,7 @@ input:focus {
   cursor: pointer;
   transition: transform 120ms var(--ease-out), background-color 150ms ease;
 }
-.stepper-btn:hover { background: var(--line); }
-.stepper-btn:active { transform: scale(0.9); }
+.stepper-btn:active { transform: scale(0.95); }
 .stepper-btn:disabled { color: var(--text-2); opacity: 0.4; cursor: default; }
 
 /* ---------- Finished ---------- */
@@ -530,7 +647,7 @@ input:focus {
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow);
-  transition: opacity 400ms var(--ease-out), transform 400ms var(--ease-out);
+  transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-out);
 }
 @starting-style {
   .finished { opacity: 0; transform: translateY(8px) scale(0.98); }
@@ -561,19 +678,10 @@ input:focus {
   border-radius: 16px;
 }
 .qa summary::-webkit-details-marker { display: none; }
-.qa summary::after {
-  content: "";
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-right: 2px solid var(--text-2);
-  border-bottom: 2px solid var(--text-2);
-  transform: translateY(-2px) rotate(45deg);
-  transition: transform 250ms var(--ease-out);
-}
-.qa[open] summary::after { transform: translateY(2px) rotate(-135deg); }
 .qa-body { padding: 0 20px 16px; color: var(--text-2); }
 .qa-body p { margin: 0; }
+/* The answer settles in instead of teleporting; closing stays instant */
+.qa[open] .qa-body { animation: rise 200ms var(--ease-out); }
 
 /* ---------- Footer ---------- */
 
@@ -586,12 +694,12 @@ input:focus {
   color: var(--text-2);
 }
 
-/* ---------- Toast (Sonner-style) ---------- */
+/* ---------- Toast (Sonner-style), only for errors now ---------- */
 
 .toaster {
   position: fixed;
   left: 50%;
-  bottom: max(24px, env(safe-area-inset-bottom));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
   z-index: 50;
   display: grid;
@@ -609,8 +717,8 @@ input:focus {
   color: var(--bg);
   font-size: 0.9rem;
   font-weight: 500;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
-  transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-out);
+  box-shadow: 0 8px 30px rgba(75, 38, 14, 0.2);
+  transition: opacity 400ms ease, transform 400ms ease;
 }
 @starting-style {
   .toast { opacity: 0; transform: translateY(100%) scale(0.95); }
@@ -621,10 +729,33 @@ input:focus {
   transition-duration: 200ms;
 }
 
+/* ---------- Hover: only for real pointers, touch would leave it stuck ---------- */
+
+@media (hover: hover) and (pointer: fine) {
+  a:hover { text-decoration-color: currentColor; }
+  .button:hover { background: color-mix(in srgb, var(--accent) 10%, var(--surface-2)); }
+  .button.primary:hover { background: var(--accent-press); }
+  .copy:hover { background: color-mix(in srgb, var(--code-text) 20%, transparent); }
+  .stepper-btn:hover { background: var(--line); }
+}
+
+/* Pointer-down feedback on the big rows, where a scale would look like the page wobbling */
+.qa summary:active,
+.step.done .step-head:active { background: color-mix(in srgb, var(--text) 4%, transparent); }
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 720px) {
   .tiles { grid-template-columns: 1fr; }
+  /* icon beside the text, so three tiles don't take a whole screen */
+  .tile {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 16px;
+    padding: 18px;
+  }
+  .tile-icon { grid-row: span 2; }
+  .tile h3 { margin-top: 0; }
   .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hero { padding: 56px 0 40px; }
 }
@@ -638,13 +769,26 @@ input:focus {
   .field-row .field { flex-basis: 100%; }
 }
 
+/* Smallest phones: the "2 of 7" text is enough, the bar goes */
+@media (max-width: 374px) {
+  .progress-track { display: none; }
+  .segmented button { padding: 4px 10px; }
+}
+
 /* ---------- Accessibility preferences ---------- */
 
+/* Fewer and gentler, not none: fades and color changes stay, movement goes */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  *, *::before, *::after {
-    transition-duration: 1ms !important;
-  }
+  .hero > *,
+  .qa[open] .qa-body { animation-name: fade; }
+  .segmented-thumb,
+  .progress-fill,
+  .qa summary::after,
+  .step.done .step-head::after { transition: none; }
+  .badge .num { transition: opacity 150ms ease; }
+  .step-body { transition: opacity 150ms ease, visibility 0s; }
+  .step.done:not(.open) .step-body { transition: opacity 150ms ease, visibility 0s 150ms; }
   .toast, .finished { transition: opacity 200ms ease !important; transform: none !important; }
 }
 
