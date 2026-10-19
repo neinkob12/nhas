@@ -32,8 +32,36 @@ python3 nhas_slot_bot.py --party 2 --date 2026-10-20 --earliest 18:00 --latest 2
 python3 nhas_slot_bot.py --party 4 --days-ahead 3
 ```
 
-When it reserves a slot it prints `RESERVED ...` and exits. Then finish your order in the browser
-within the 10 minutes.
+When it reserves a slot it prints `RESERVED ...`, sends a push to your phone (if set up) and then
+keeps the hold alive for you (see below).
+
+## Phone push notifications (ntfy)
+
+1. Install the free **ntfy** app ([Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy),
+   [iPhone](https://apps.apple.com/app/ntfy/id1625396347)). No account needed.
+2. In the app, tap **+** and subscribe to a topic. Anyone who knows the name can read it, so
+   make it unguessable, e.g. `nhas-jakob-7f3k9q`.
+3. Tell the bot the same topic and send a test:
+
+   ```bash
+   export NHAS_NTFY_TOPIC=nhas-jakob-7f3k9q
+   python3 nhas_slot_bot.py --test-push
+   ```
+
+You get an urgent push when a slot is reserved. **Tapping it opens the order page on your phone.**
+The hold belongs to your account, not the computer, so as long as you are logged in to the same
+account in your phone's browser you'll see the held slot and can order and pay right there.
+
+## Auto-extend
+
+A hold only lasts 10 minutes. After reserving, the bot stays running and renews the hold whenever
+less than 90 seconds are left (the same thing the site's "extend" button does), so you have time
+to get to your phone. It stops when:
+
+- you start checkout (the site keeps the slot while you pay),
+- you release the slot or pick another one in the browser,
+- `--keep-held` minutes have passed (default 30, `--keep-held 0` turns it off). You get a push
+  when it gives up.
 
 | Option | Default | Meaning |
 | --- | --- | --- |
@@ -46,12 +74,15 @@ within the 10 minutes.
 | `--dry-run` | off | Never reserve, only report |
 | `--store` | koeln | Store slug from the URL |
 | `--cookie` | `$NHAS_COOKIE` or `cookie.txt` | Cookie header value |
+| `--ntfy-topic` | `$NHAS_NTFY_TOPIC` | ntfy topic for phone pushes |
+| `--keep-held` | 30 | Minutes to keep renewing the hold, 0 = off |
+| `--test-push` | off | Send a test push and exit |
 
 ## How it works
 
 The site's frontend calls a JSON API under `/bestellen/api`. The bot uses the same calls:
 `GET /me` (login check), `GET /store/koeln` (store id), `GET /slots` (availability) and
-`POST /holds` (reserve). A slot counts as free when it is `bookable`, has
+`POST /holds` (reserve, and again to extend), `GET /holds` (watch the hold). A slot counts as free when it is `bookable`, has
 `remainingPersons >= party`, and starts after the store's minimum lead time, which is the
 same rule the site uses.
 
