@@ -119,7 +119,8 @@ class Client:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                 self._absorb(resp.headers)
                 raw = resp.read()
-                return json.loads(raw) if raw else None
+                # every response is wrapped as {"data": ...}
+                return (json.loads(raw) or {}).get("data") if raw else None
         except urllib.error.HTTPError as e:
             self._absorb(e.headers)
             raw = e.read()
