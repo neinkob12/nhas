@@ -94,3 +94,24 @@ The site's frontend calls a JSON API under `/bestellen/api`. The bot uses the sa
 same rule the site uses.
 
 If you get "Not logged in", your cookie expired: copy a fresh one.
+
+## New bookable days
+
+Nhas doesn't publish when a new day opens for booking. The bot watches for it: when a date
+shows up that wasn't bookable before, it prints `NEW DAY OPENED: <date>` with the time and
+sends a push. Once that time is known, put it in `NEW_DAYS_INFO` at the top of `web/app.js`
+so the website shows it.
+
+## Website
+
+`web/` is a static setup guide that walks someone through installing and running the bot on
+their own computer, step by step, with commands filled in for Mac or Windows. It serves the
+bot file itself, so the GitHub repo can stay private.
+
+Deploy on Vercel: import this repo, keep the defaults. `vercel.json` copies `web/` and
+`nhas_slot_bot.py` into `public/` at build time, so the script on the site always matches
+the one in the repo. Preview locally with:
+
+```bash
+rm -rf public && cp -r web public && cp nhas_slot_bot.py public/ && python3 -m http.server -d public
+```

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "",
+  "buildCommand": "rm -rf public && cp -r web public && cp nhas_slot_bot.py public/",
+  "outputDirectory": "public",
+  "headers": [
+    {
+      "source": "/nhas_slot_bot.py",
+      "headers": [
+        { "key": "Content-Type", "value": "text/x-python; charset=utf-8" },
+        { "key": "Cache-Control", "value": "no-cache" }
+      ]
+    }
+  ]
+}
