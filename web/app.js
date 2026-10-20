@@ -80,7 +80,8 @@ function renderCommands() {
       const copy = document.createElement("button");
       copy.type = "button";
       copy.className = "copy";
-      copy.innerHTML = '<span class="copy-label"><span>Copy</span><span aria-hidden="true">Copied</span></span>';
+      const icon = (id) => `<svg class="icon" aria-hidden="true"><use href="#i-${id}"></use></svg>`;
+      copy.innerHTML = `<span class="copy-label"><span>${icon("copy")}Copy</span><span aria-hidden="true">${icon("check")}Copied</span></span>`;
       copy.addEventListener("click", () => copyText(block.dataset.text, copy));
       block.append(pre, copy);
     }

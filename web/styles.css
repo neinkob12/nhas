@@ -1,55 +1,70 @@
 /*
-  Palette: sage, burnt orange, cream and dark brown, taken from a butterfly wing.
-  Orange is the one action color, sage only ever means "done", brown is the ink.
-  Every text pair here passes WCAG AA in both color schemes.
+  Graphit: monochrome, one green. Ink is the only action color, green only ever means "done".
+  Every text pair passes WCAG AA in both color schemes.
 */
-:root {
-  --bg: #f6f4e4;
-  --surface: #fdfcf8;
-  --surface-2: #f3efd9;
-  --text: #4b260e;
-  --text-2: #7d6351;
-  --line: rgba(75, 38, 14, 0.1);
-  --accent: #a1540e;
-  --accent-press: #88470c;
-  --accent-soft: rgba(161, 84, 14, 0.1);
-  --on-accent: #fdfcf8;
-  --sage: #8ba08b;
-  --sage-strong: #567656;
-  --on-sage: #ffffff;
-  --code-bg: #4b260e;
-  --code-text: #ece7c2;
-  --code-muted: #ac9a7a;
-  --nav-bg: rgba(246, 244, 228, 0.72);
-  --shadow: 0 1px 2px rgba(75, 38, 14, 0.05), 0 8px 24px rgba(75, 38, 14, 0.05);
 
+/* Geist (SIL OFL, see fonts/OFL.txt), served from here rather than a font CDN */
+@font-face {
+  font-family: "Geist";
+  src: url("fonts/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  /* preloaded; if it still isn't there in time, keep the system font instead of shifting the page */
+  font-display: optional;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("fonts/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --border: #e4e4e7;
+  --text: #18181b;
+  --text-2: #6b6b73;
+  --primary-hover: #3f3f46;
+  --done: #15803d;
+  --on-done: #ffffff;
+  --thumb: #ffffff;
+  --code-bg: #fafafa;
+  --code-muted: #8e8e96;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-  --radius: 22px;
+  --r-lg: 10px;
+  --r-md: 8px;
+  --r-sm: 6px;
+  --r-xs: 4px;
 
   color-scheme: light dark;
 }
 
+/* Dark is its own palette, not an inversion: each layer a step lighter, edges drawn with borders */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #17100a;
-    --surface: #211810;
-    --surface-2: #2d2218;
-    --text: #ece7c2;
-    --text-2: #a8a287;
-    --line: rgba(236, 231, 194, 0.1);
-    --accent: #e08b3e;
-    --accent-press: #ea9c55;
-    --accent-soft: rgba(224, 139, 62, 0.14);
-    --on-accent: #17100a;
-    --sage-strong: #8ba08b;
-    --on-sage: #17100a;
-    --code-bg: #0f0a06;
-    --code-muted: #9a9178;
-    --nav-bg: rgba(23, 16, 10, 0.72);
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface-2: #1c1c1c;
+    --border: #262626;
+    --text: #ededed;
+    --text-2: #a1a1a1;
+    --primary-hover: #ffffff;
+    --done: #3fcf6e;
+    --on-done: #0a0a0a;
+    --thumb: #2e2e2e;
+    --code-bg: #0a0a0a;
+    --code-muted: #6e6e6e;
     --shadow: none;
   }
 }
+
+/* ---------- Base ---------- */
 
 * { box-sizing: border-box; }
 
@@ -64,34 +79,35 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 100%/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+  font: 100%/1.55 var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+::selection { background: color-mix(in srgb, var(--text) 22%, transparent); }
 
-/* No single word left hanging on the last line */
 h1, h2, h3, .lede { text-wrap: balance; }
 p, li { text-wrap: pretty; }
 
 /* Underlines are reserved for links, so a link reads as one without relying on color */
 a {
-  color: var(--accent);
+  color: var(--text);
   text-decoration: underline;
   text-decoration-thickness: 1px;
-  text-underline-offset: 0.2em;
-  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  text-underline-offset: 0.22em;
+  text-decoration-color: color-mix(in srgb, var(--text) 35%, transparent);
   transition: text-decoration-color 150ms ease;
 }
 
 code {
-  font: 0.88em/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font: 0.86em/1.4 var(--font-mono);
   background: var(--surface-2);
-  padding: 0.1em 0.35em;
-  border-radius: 6px;
+  border: 1px solid var(--border);
+  padding: 0.05em 0.35em;
+  border-radius: var(--r-xs);
   overflow-wrap: anywhere;
 }
 
+strong { font-weight: 650; }
 .muted { color: var(--text-2); }
 
 .sr-only {
@@ -103,6 +119,13 @@ code {
   white-space: nowrap;
 }
 
+.icon {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  fill: currentColor;
+}
+
 /* Controls: no long-press text selection, no double-tap zoom delay */
 button,
 summary,
@@ -112,16 +135,18 @@ summary,
   -webkit-user-select: none;
 }
 
-/* ---------- Nav: translucent material, content scrolls under ---------- */
+:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* ---------- Nav ---------- */
 
 .nav {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--nav-bg);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  border-bottom: 1px solid var(--border);
 }
 
 .nav-inner {
@@ -134,13 +159,27 @@ summary,
 }
 
 .brand {
-  font-weight: 600;
-  font-size: 1.05rem;
-  letter-spacing: -0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-right: auto;
   color: var(--text);
   text-decoration: none;
+  font-weight: 650;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
   white-space: nowrap;
-  margin-right: auto;
+}
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 17px;
 }
 
 .progress {
@@ -156,41 +195,55 @@ summary,
   width: 72px;
   height: 4px;
   border-radius: 2px;
-  background: var(--line);
+  background: var(--border);
   overflow: hidden;
 }
 .progress-fill {
   display: block;
   height: 100%;
   width: 100%;
-  background: var(--sage-strong);
-  border-radius: inherit;
+  background: var(--done);
   transform-origin: left;
   transform: scaleX(0);
   transition: transform 250ms var(--ease-in-out);
 }
 
-/* Segmented control with a sliding thumb */
+/* ---------- OS switch: a radio group drawn as a segmented control ----------
+   The thumb slides underneath; a second copy of the labels in the active color is
+   clipped to the same half and slides with it, so text color and thumb change in sync. */
+
 .segmented {
   position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  padding: 2px;
-  border-radius: 9px;
-  background: var(--line);
+  padding: 3px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   isolation: isolate;
+  --r-seg: max(2px, calc(var(--r-sm) - 2px));
 }
+.segmented button,
+.segmented-labels > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.segmented .icon { font-size: 14px; }
 .segmented button {
   position: relative;
   appearance: none;
   border: 0;
   background: none;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 500;
-  padding: 4px 14px;
-  border-radius: 7px;
+  color: var(--text-2);
+  border-radius: var(--r-seg);
   cursor: pointer;
   transition: transform 160ms var(--ease-out);
 }
@@ -198,16 +251,27 @@ summary,
 .segmented-thumb {
   position: absolute;
   z-index: -1;
-  top: 2px;
-  left: 2px;
-  width: calc(50% - 2px);
-  height: calc(100% - 4px);
-  border-radius: 7px;
-  background: var(--surface);
-  box-shadow: 0 1px 3px rgba(75, 38, 14, 0.14);
+  top: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  height: calc(100% - 6px);
+  border-radius: var(--r-seg);
+  background: var(--thumb);
+  box-shadow: 0 0 0 1px var(--border), var(--shadow);
   transition: transform 250ms var(--ease-in-out);
 }
+.segmented-labels {
+  position: absolute;
+  inset: 3px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  color: var(--text);
+  pointer-events: none;
+  clip-path: inset(0 50% 0 0);
+  transition: clip-path 250ms var(--ease-in-out);
+}
 .segmented[data-value="win"] .segmented-thumb { transform: translateX(100%); }
+.segmented[data-value="win"] .segmented-labels { clip-path: inset(0 0 0 50%); }
 
 /* Small controls get a 44px hit area without growing visually */
 .segmented button::after,
@@ -228,10 +292,7 @@ main {
   padding: 0 16px;
 }
 
-.hero {
-  text-align: center;
-  padding: 88px 0 56px;
-}
+.hero { padding: 80px 0 48px; }
 /* First visit only, so it may take a beat: a short stagger, never blocking clicks */
 .hero > * { animation: rise 300ms var(--ease-out) backwards; }
 .hero > :nth-child(2) { animation-delay: 50ms; }
@@ -246,26 +307,39 @@ main {
 }
 
 .eyebrow {
-  margin: 0 0 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 3px 10px 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 0.78rem;
+  font-weight: 500;
   color: var(--text-2);
-  letter-spacing: 0.01em;
+}
+.eyebrow::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--done);
 }
 h1 {
   margin: 0;
-  font-size: clamp(2.5rem, 8vw, 4.5rem);
-  line-height: 1.04;
-  letter-spacing: -0.035em;
-  font-weight: 700;
+  font-family: var(--font-sans);
+  font-size: clamp(2.25rem, 6.5vw, 3.75rem);
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+  font-weight: 600;
 }
 .lede {
   max-width: 34em;
-  margin: 20px auto 32px;
-  font-size: clamp(1.1rem, 2.4vw, 1.3rem);
-  line-height: 1.45;
+  margin: 18px 0 28px;
+  font-size: 1.125rem;
+  line-height: 1.5;
   color: var(--text-2);
-  letter-spacing: -0.01em;
 }
 .hint {
   margin: 14px 0 0;
@@ -275,10 +349,11 @@ h1 {
 
 .section-title {
   margin: 0 0 8px;
-  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-family: var(--font-sans);
+  font-size: clamp(1.75rem, 4vw, 2.125rem);
   line-height: 1.1;
-  letter-spacing: -0.025em;
-  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-weight: 600;
 }
 .section-sub {
   margin: 0 0 24px;
@@ -287,40 +362,33 @@ h1 {
 
 .how { padding: 24px 0 64px; }
 .how .section-title { margin-bottom: 20px; }
+/* One card split in three, not three floating cards */
 .tiles {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-.tile {
   background: var(--surface);
-  border-radius: var(--radius);
-  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow);
 }
+.tile { padding: 22px; }
+.tile + .tile { border-left: 1px solid var(--border); }
 .tile-icon {
   display: grid;
   place-items: center;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.tile-icon svg,
-.icon {
-  width: 22px;
-  height: 22px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 22px;
 }
 .tile h3 {
-  margin: 14px 0 4px;
-  font-size: 1.1rem;
-  letter-spacing: -0.015em;
+  margin: 16px 0 4px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 .tile p {
   margin: 0;
@@ -335,32 +403,31 @@ h1 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  border: 0;
-  border-radius: 980px;
-  padding: 9px 18px;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 9px 16px;
   font: inherit;
-  font-size: 0.93rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  color: var(--accent);
+  color: var(--text);
   background: var(--surface-2);
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: transform 160ms var(--ease-out), background-color 200ms ease, color 200ms ease;
+  transition: transform 160ms var(--ease-out), background-color 200ms ease, border-color 200ms ease;
 }
 .button:active { transform: scale(0.97); }
+.button .icon { font-size: 16px; }
 .button.primary {
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--bg);
+  background: var(--text);
+  border-color: transparent;
 }
 .button.large {
-  padding: 13px 28px;
-  font-size: 1.05rem;
+  padding: 12px 24px;
+  font-size: 1rem;
 }
-
-:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
-a:focus-visible { border-radius: 4px; }
 
 /* ---------- Steps ---------- */
 
@@ -376,16 +443,18 @@ a:focus-visible { border-radius: 4px; }
 
 .step {
   background: var(--surface);
-  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow);
-  outline: 1px solid transparent;
-  outline-offset: -1px;
-  transition: outline-color 200ms ease, background-color 200ms ease;
+  transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
 }
-.step.current { outline-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.step.current {
+  border-color: var(--text);
+  box-shadow: var(--shadow), 0 0 0 1px var(--text);
+}
 .step.done {
-  outline-color: color-mix(in srgb, var(--sage) 55%, transparent);
-  background-color: color-mix(in srgb, var(--sage) 12%, var(--surface));
+  background-color: color-mix(in srgb, var(--done) 6%, var(--surface));
+  border-color: color-mix(in srgb, var(--done) 32%, var(--border));
 }
 
 .step-head {
@@ -393,41 +462,36 @@ a:focus-visible { border-radius: 4px; }
   align-items: center;
   gap: 14px;
   padding: 18px 22px;
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
 }
 .step.done .step-head { cursor: pointer; }
 .step-title { flex: 1; min-width: 0; }
 
 .badge {
-  position: relative;
   flex: none;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-sm);
   background: var(--surface-2);
+  border: 1px solid var(--border);
   color: var(--text-2);
-  font-weight: 600;
-  font-size: 0.95rem;
+  font: 600 0.9rem/1 var(--font-sans);
   font-variant-numeric: tabular-nums;
-  transition: background-color 200ms ease, color 200ms ease;
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
 }
-.step.current .badge { background: var(--accent); color: var(--on-accent); }
-.step.done .badge { background: var(--sage-strong); color: var(--on-sage); }
+.step.current .badge { background: var(--text); border-color: transparent; color: var(--bg); }
+.step.done .badge { background: var(--done); border-color: transparent; color: var(--on-done); }
 
 .badge .num,
 .badge .check { grid-area: 1 / 1; }
 .badge .num { transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out); }
 /* The check wipes in from the left; un-checking snaps back faster than it drew */
 .badge .check {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
   clip-path: inset(0 100% 0 0);
   transition: clip-path 150ms var(--ease-out);
 }
@@ -439,27 +503,28 @@ a:focus-visible { border-radius: 4px; }
 
 .step-title h3 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
+  font-weight: 600;
   letter-spacing: -0.015em;
   line-height: 1.25;
 }
 .step-meta {
-  margin: 2px 0 0;
-  font-size: 0.82rem;
+  margin: 3px 0 0;
+  font: 0.75rem/1.4 var(--font-mono);
   color: var(--text-2);
 }
 .step.done .step-meta::after { content: " · Done"; }
 
-/* Same chevron as the questions below: a finished step folds like they do */
+/* One chevron for everything that folds: finished steps and the questions */
 .qa summary::after,
 .step.done .step-head::after {
   content: "";
   flex: none;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   margin-right: 4px;
-  border-right: 2px solid var(--text-2);
-  border-bottom: 2px solid var(--text-2);
+  border-right: 1.5px solid var(--text-2);
+  border-bottom: 1.5px solid var(--text-2);
   transform: translateY(-2px) rotate(45deg);
   transition: transform 200ms var(--ease-in-out);
 }
@@ -506,26 +571,33 @@ a:focus-visible { border-radius: 4px; }
 .step.done .done-btn { color: var(--text-2); }
 
 .callout {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
   margin: 0 0 16px;
   padding: 14px 16px;
-  border-radius: 14px;
-  background: var(--accent-soft);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--text) 9%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--text) 24%, var(--border));
   font-size: 0.93rem;
 }
+.callout .icon { font-size: 20px; margin-top: 1px; color: var(--text); }
+.step-inner .callout p { margin: 0; }
 
 /* ---------- Code blocks ---------- */
 
 .code {
   position: relative;
   margin: 0 0 14px;
-  border-radius: 14px;
+  border-radius: var(--r-md);
   background: var(--code-bg);
-  color: var(--code-text);
+  color: var(--text);
+  border: 1px solid var(--border);
 }
 .code pre {
   margin: 0;
-  padding: 14px 84px 14px 16px;
-  font: 0.86rem/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  padding: 14px 104px 14px 16px;
+  font: 0.84rem/1.6 var(--font-mono);
   /* wrap instead of scrolling so text never slides under the copy button */
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -537,25 +609,29 @@ a:focus-visible { border-radius: 4px; }
   top: 8px;
   right: 8px;
   appearance: none;
-  border: 0;
-  border-radius: 8px;
-  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+  border-radius: max(3px, calc(var(--r-md) - 3px));
+  padding: 5px 9px;
   font: inherit;
   font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--code-text);
-  background: color-mix(in srgb, var(--code-text) 12%, transparent);
+  font-weight: 550;
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
   cursor: pointer;
   transition: transform 160ms var(--ease-out), background-color 200ms ease;
 }
-.copy:active { transform: scale(0.95); }
+.copy:active { transform: scale(0.96); }
+.copy .icon { font-size: 14px; }
 
 /* "Copy" and "Copied" share one cell, so the button never changes width.
-   A 2px blur blends the two words into one change instead of two overlapping labels. */
+   A 2px blur blends the two into one change instead of two overlapping labels. */
 .copy-label { display: inline-grid; }
 .copy-label > span {
   grid-area: 1 / 1;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   transition: filter 200ms ease, opacity 200ms ease;
 }
 .copy-label > :last-child,
@@ -581,10 +657,11 @@ input[type="date"],
 input[type="time"] {
   width: 100%;
   min-width: 0;
+  height: 42px;
   appearance: none;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 0 12px;
   font: inherit;
   font-size: 1rem;
   color: var(--text);
@@ -593,10 +670,10 @@ input[type="time"] {
 }
 input:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 22%, transparent);
 }
-#topic { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+#topic { font-family: var(--font-mono); }
 
 .form-grid {
   display: grid;
@@ -610,10 +687,10 @@ input:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
   background: var(--surface-2);
-  height: 44px;
+  height: 42px;
   padding: 0 4px;
 }
 .stepper output {
@@ -623,14 +700,15 @@ input:focus {
 }
 .stepper-btn {
   position: relative;
+  display: grid;
+  place-items: center;
   appearance: none;
   border: 0;
   width: 34px;
   height: 34px;
-  border-radius: 9px;
-  font: inherit;
-  font-size: 1.2rem;
-  color: var(--accent);
+  border-radius: max(3px, calc(var(--r-md) - 4px));
+  font-size: 16px;
+  color: var(--text);
   background: none;
   cursor: pointer;
   transition: transform 120ms var(--ease-out), background-color 150ms ease;
@@ -644,41 +722,60 @@ input:focus {
   margin-top: 16px;
   text-align: center;
   padding: 36px 22px;
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   background: var(--surface);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow);
   transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-out);
 }
 @starting-style {
   .finished { opacity: 0; transform: translateY(8px) scale(0.98); }
 }
-.finished-icon { font-size: 2.5rem; }
-.finished h3 { margin: 8px 0 16px; font-size: 1.4rem; letter-spacing: -0.02em; }
+.finished-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 28px;
+}
+.finished h3 {
+  margin: 14px 0 16px;
+  font-family: var(--font-sans);
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
 
 /* ---------- FAQ ---------- */
 
 .faq { padding-bottom: 64px; }
 .faq .section-title { margin-bottom: 16px; }
 
+/* The questions read as one list: shared borders, rounded only at the ends */
 .qa {
   background: var(--surface);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-  margin-bottom: 8px;
+  border: 1px solid var(--border);
 }
+.qa + .qa { border-top: 0; }
+.qa:first-of-type { border-radius: var(--r-lg) var(--r-lg) 0 0; }
+.qa:last-of-type { border-radius: 0 0 var(--r-lg) var(--r-lg); }
 .qa summary {
   list-style: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 16px 20px;
+  padding: 15px 18px;
   font-weight: 600;
   cursor: pointer;
-  border-radius: 16px;
+  border-radius: inherit;
 }
 .qa summary::-webkit-details-marker { display: none; }
-.qa-body { padding: 0 20px 16px; color: var(--text-2); }
+.qa-body { padding: 0 18px 16px; color: var(--text-2); }
 .qa-body p { margin: 0; }
 /* The answer settles in instead of teleporting; closing stays instant */
 .qa[open] .qa-body { animation: rise 200ms var(--ease-out); }
@@ -689,12 +786,12 @@ input:focus {
   max-width: 760px;
   margin: 0 auto;
   padding: 24px 16px 48px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--border);
   font-size: 0.8rem;
   color: var(--text-2);
 }
 
-/* ---------- Toast (Sonner-style), only for errors now ---------- */
+/* ---------- Toast (Sonner-style), only for errors ---------- */
 
 .toaster {
   position: fixed;
@@ -708,16 +805,13 @@ input:focus {
 }
 .toast {
   grid-area: 1 / 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
   padding: 10px 16px;
-  border-radius: 999px;
+  border-radius: var(--r-md);
   background: var(--text);
   color: var(--bg);
   font-size: 0.9rem;
   font-weight: 500;
-  box-shadow: 0 8px 30px rgba(75, 38, 14, 0.2);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
   transition: opacity 400ms ease, transform 400ms ease;
 }
 @starting-style {
@@ -733,10 +827,11 @@ input:focus {
 
 @media (hover: hover) and (pointer: fine) {
   a:hover { text-decoration-color: currentColor; }
-  .button:hover { background: color-mix(in srgb, var(--accent) 10%, var(--surface-2)); }
-  .button.primary:hover { background: var(--accent-press); }
-  .copy:hover { background: color-mix(in srgb, var(--code-text) 20%, transparent); }
-  .stepper-btn:hover { background: var(--line); }
+  .button:hover { background: color-mix(in srgb, var(--text) 6%, var(--surface-2)); }
+  .button.primary:hover { background: var(--primary-hover); }
+  .copy:hover { background: color-mix(in srgb, var(--text) 16%, transparent); }
+  .stepper-btn:hover { background: color-mix(in srgb, var(--text) 7%, transparent); }
+  .segmented button:hover { color: var(--text); }
 }
 
 /* Pointer-down feedback on the big rows, where a scale would look like the page wobbling */
@@ -747,6 +842,7 @@ input:focus {
 
 @media (max-width: 720px) {
   .tiles { grid-template-columns: 1fr; }
+  .tile + .tile { border-left: 0; border-top: 1px solid var(--border); }
   /* icon beside the text, so three tiles don't take a whole screen */
   .tile {
     display: grid;
@@ -769,10 +865,20 @@ input:focus {
   .field-row .field { flex-basis: 100%; }
 }
 
-/* Smallest phones: the "2 of 7" text is enough, the bar goes */
-@media (max-width: 374px) {
+/* Small phones: the logo stands in for the name, the "2 of 7" text for the bar */
+@media (max-width: 420px) {
+  .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
   .progress-track { display: none; }
-  .segmented button { padding: 4px 10px; }
+}
+@media (max-width: 350px) {
+  .segmented button,
+  .segmented-labels > span { padding: 5px 9px; }
 }
 
 /* ---------- Accessibility preferences ---------- */
@@ -783,6 +889,7 @@ input:focus {
   .hero > *,
   .qa[open] .qa-body { animation-name: fade; }
   .segmented-thumb,
+  .segmented-labels,
   .progress-fill,
   .qa summary::after,
   .step.done .step-head::after { transition: none; }

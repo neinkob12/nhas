@@ -110,7 +110,8 @@ bot file itself, so the GitHub repo can stay private.
 
 Deploy on Vercel: import this repo, keep the defaults. `vercel.json` copies `web/` and
 `nhas_slot_bot.py` into `public/` at build time, so the script on the site always matches
-the one in the repo. Preview locally with:
+the one in the repo. The Geist fonts in `web/fonts/` are served from the site itself (SIL Open Font
+License). Preview locally with:
 
 ```bash
 rm -rf public && cp -r web public && cp nhas_slot_bot.py public/ && python3 -m http.server -d public
