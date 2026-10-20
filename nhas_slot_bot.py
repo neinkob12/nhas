@@ -194,24 +194,40 @@ def parse_ts(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(TZ)
 
 
+HEARTBEAT_S = 600  # when nothing changes, still print a sign of life this often
+_last_printed = time.monotonic()
+_last_status: dict[str, str] = {}
+
+
 def log(msg: str) -> None:
+    global _last_printed
+    _last_printed = time.monotonic()
     print(f"[{datetime.now(TZ):%H:%M:%S}] {msg}", flush=True)
 
 
-def slot_ok(slot: dict, f: Filters, min_lead_minutes: int) -> bool:
-    """Mirror the site's own rule: bookable, enough room, not too soon, inside our window."""
+def log_change(key: str, msg: str) -> None:
+    """Print `msg` only if it differs from the last message logged under `key`."""
+    if _last_status.get(key) != msg:
+        _last_status[key] = msg
+        log(msg)
+
+
+def slot_free(slot: dict, f: Filters, min_lead_minutes: int) -> bool:
+    """Mirror the site's own rule: bookable, enough room, not too soon. Skips slots you declined."""
     if not slot.get("bookable") or slot["start"] in f.declined:
         return False
     if (slot.get("remainingPersons") or 0) < f.party:
         return False
-    start = parse_ts(slot["start"])
-    if start < datetime.now(TZ) + timedelta(minutes=min_lead_minutes):
-        return False
-    if f.earliest and start.time() < f.earliest:
-        return False
-    if f.latest and start.time() > f.latest:
-        return False
-    return True
+    return parse_ts(slot["start"]) >= datetime.now(TZ) + timedelta(minutes=min_lead_minutes)
+
+
+def in_window(slot: dict, f: Filters) -> bool:
+    start = parse_ts(slot["start"]).time()
+    return not (f.earliest and start < f.earliest) and not (f.latest and start > f.latest)
+
+
+def slot_ok(slot: dict, f: Filters, min_lead_minutes: int) -> bool:
+    return slot_free(slot, f, min_lead_minutes) and in_window(slot, f)
 
 
 def find_slot(client: Client, store_id: str, f: Filters, known_days: set[str]) -> dict | None:
@@ -238,10 +254,15 @@ def find_slot(client: Client, store_id: str, f: Filters, known_days: set[str]) -
     for day in days:
         data = first if first.get("date") == day else client.slots(store_id, day, f.party)
         lead = (data.get("rules") or {}).get("minLeadMinutes") or 0
-        free = [s for s in data.get("slots") or [] if slot_ok(s, f, lead)]
-        log(f"{day}: {len(free)} matching slot(s) out of {len(data.get('slots') or [])}")
-        if free:
-            return min(free, key=lambda s: s["start"])
+        slots = data.get("slots") or []
+        free = [s for s in slots if slot_free(s, f, lead)]
+        matching = [s for s in free if in_window(s, f)]
+        summary = f"{day}: {len(slots)} slots, {len(free)} free for {f.party}"
+        if f.earliest or f.latest:
+            summary += f", {len(matching)} in your window"
+        log_change(f"day:{day}", summary)
+        if matching:
+            return min(matching, key=lambda s: s["start"])
     return None
 
 
@@ -433,7 +454,10 @@ def main(argv: list[str]) -> int:
                 days = ", ".join(sorted(known_days - before))
                 notify.send("New day open for booking", f"{days} opened at {datetime.now(TZ):%H:%M}.", click=page)
             if slot is None:
-                log("No matching slot free yet.")
+                log_change("loop", "No matching slot free yet.")
+                log_change("note", f"(From now on only changes are printed, plus a sign of life every {HEARTBEAT_S // 60} min.)")
+                if time.monotonic() - _last_printed > HEARTBEAT_S:
+                    log("Still watching, nothing changed.")
             elif args.dry_run:
                 msg = f"{parse_ts(slot['start']):%a %d.%m %H:%M} ({slot['remainingPersons']} places left)"
                 log(f"Free: {msg}. Dry run, not reserving.")
@@ -489,9 +513,9 @@ def main(argv: list[str]) -> int:
                 log(f"Cannot reserve: {e}. Fix this in the browser, then run again.")
                 return 1
             else:
-                log(f"API error: {e}")
+                log_change("loop", f"API error: {e}. Retrying quietly.")
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
-            log(f"Network error: {e}")
+            log_change("loop", f"Network error: {e}. Retrying quietly until it's back.")
 
         if args.once:
             return 0 if args.dry_run else 2
